@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Меню ресторана</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="container">
+{% block content %}
+{% endblock %}
+
+{% block dashboard %}
+    <div class="fixed-header">
+        <!-- Логотип ресторана -->
+        <img src="{{ restaurant.image.url }}" alt="{{ restaurant.name }}" id="restaurant-logo"
+             class="restaurant-banner mb-2">
+
+        <!-- Ряд с "Меню" и корзиной -->
+        <div class="menu-header d-flex justify-content-between align-items-center px-3 mt-2">
+            <a href="{% url 'view_cart' %}" class="cart-link text-dark position-relative">
+                <i class="fas fa-shopping-cart shopping-cart-lg" ></i>
+                <span id="cart-count" 
+                      class="badge bg-danger rounded-pill position-absolute  top-0 start-100 translate-middle">
+                0
+            </span>
+            </a>
+                        <h1 class="menu-title m-0">Меню</h1>
+
+        </div>
+    </div>
+
+    <div id="message-container">
+        <p id="message-text"></p>
+    </div>
+
+    <!-- Список категорий -->
+    <div id="categories" class="d-flex flex-wrap justify-content-center mt-4">
+        {% for category in categories %}
+            <div class="category-container text-center mb-2 p-0">
+                <button class="category-btn btn" data-id="{{ category.id }}">
+                    <img src="{{ category.image.url }}" alt="{{ category.name }}" class="category-photo">
+                </button>
+                <p class="category-name ">{{ category.name }}</p>
+            </div>
+        {% empty %}
+            <p class="text-center">Категории еще не добавлены.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Список блюд -->
+    <div id="dishes" class="mt-4">
+        <p class="text-center">Выберите категорию, чтобы увидеть блюда.</p>
+    </div>
+
+{% endblock dashboard %}
+
+<script>
+    $(document).ready(function () {
+        // Получаем блюда по категориям
+        $('.category-btn').click(function () {
+            let categoryId = $(this).data('id');
+
+            $.ajax({
+                url: "{% url 'load_dishes' 0 %}".replace("0", categoryId),
+                method: "GET",
+                success: function (response) {
+                    let dishes = response.dishes;
+                    let dishesHtml = '';
+
+                    if (dishes.length > 0) {
+                        dishes.forEach(function (dish) {
+                            // Проверяем поле is_available
+                            if (dish.is_available) {
+                                dishesHtml += `
+                    <div class="col-12 col-md-6 col-lg-4 mb-2 p-0">
+                        <div class="card h-100 dish-card p-2">
+                            <div class="dish-image-container">
+                                <img src="${dish.image_url}" alt="${dish.name}" class="dish-image">
+                            </div>
+                            <div class="dish-info">
+                                <h5 class="dish-title">${dish.name}</h5>
+                                <p class="dish-description">${dish.description}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="dish-price">${dish.price} Sum</span>
+                                    <button class="btn btn add-to-cart-btn" data-dish-id="${dish.id}" title="Добавить блюдо">
+                                        <i class="fas fa-shopping-cart fa-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                            }
+                        });
+                    }
+
+                    // Если нет доступных блюд
+                    if (!dishesHtml) {
+                        dishesHtml = '<p class="text-center">Нет доступных блюд в этой категории.</p>';
+                    }
+
+                    $('#dishes').html(dishesHtml);
+                }
+            });
+
+            // Скрываем логотип при клике на категорию
+            $('#restaurant-logo').fadeOut(300);  // Плавное скрытие логотипа
+        });
+
+        // Показываем логотип, если нужно вернуться к категориям
+        $(document).on('click', '#show-all-categories', function () {
+            $('#restaurant-logo').fadeIn(300);  // Плавное появление логотипа
+        });
+
+        // Добавление в корзину
+        $(document).on('click', '.add-to-cart-btn', function () {
+            var dishId = $(this).data('dish-id');
+
+            $.ajax({
+                url: "{% url 'add_to_cart' 0 %}".replace("0", dishId),
+                method: "GET",
+                success: function (response) {
+                    // Покажем сообщение
+                    showMessage(response.message);
+
+                    // Обновляем количество товаров в корзине
+                    $.ajax({
+                        url: "{% url 'get_cart' %}",
+                        method: "GET",
+                        success: function (response) {
+                            $('#cart-count').text(response.total_quantity); // Обновляем счётчик
+                        },
+                        error: function () {
+                            console.error("Ошибка при получении данных корзины.");
+                        }
+                    });
+                }
+            });
+        });
+
+        // Запрос для получения количества товаров в корзине
+        $.ajax({
+            url: "{% url 'get_cart' %}",
+            method: "GET",
+            success: function (response) {
+                $('#cart-count').text(response.total_quantity); // Обновляем счётчик
+            },
+            error: function () {
+                console.error("Ошибка при получении данных корзины.");
+            }
+        });
+
+        // Функция для отображения сообщения
+        function showMessage(message) {
+            $('#message-text').text(message);
+            $('#message-container').fadeIn(300);
+
+            // Скрыть сообщение через 3 секунды
+            setTimeout(function () {
+                $('#message-container').fadeOut(300);
+            }, 1500);
+        }
+    });
+</script>
+
+</body>
+</html>
