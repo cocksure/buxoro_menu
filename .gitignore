@@ -1,7 +1,11 @@
+# Убираем игнорирование этих папок
+# staticfiles/
+# media/
+
+# Оставляем игнорирование для других вещей
 .venv/
 .env/
 .env
-staticfiles/
 # Python bytecode files
 *.pyc
 *.pyo
