@@ -1,5 +1,6 @@
 .venv/
 .env/
+.env
 staticfiles/
 # Python bytecode files
 *.pyc
