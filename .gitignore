@@ -1,7 +1,5 @@
 .venv/
 .env/
-media/
-static/
 staticfiles/
 # Python bytecode files
 *.pyc
