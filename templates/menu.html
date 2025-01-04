@@ -24,14 +24,13 @@
         <!-- Ряд с "Меню" и корзиной -->
         <div class="menu-header d-flex justify-content-between align-items-center px-3 mt-2">
             <a href="{% url 'view_cart' %}" class="cart-link text-dark position-relative">
-                <i class="fas fa-shopping-cart shopping-cart-lg" ></i>
-                <span id="cart-count" 
+                <i class="fas fa-shopping-cart shopping-cart-lg"></i>
+                <span id="cart-count"
                       class="badge bg-danger rounded-pill position-absolute  top-0 start-100 translate-middle">
                 0
             </span>
             </a>
-                        <h1 class="menu-title m-0">Меню</h1>
-
+            <a href="{% url 'menu' %}" class="menu-title m-0 text-dark"><h2>Меню</h2></a>
         </div>
     </div>
 
@@ -40,7 +39,7 @@
     </div>
 
     <!-- Список категорий -->
-    <div id="categories" class="d-flex flex-wrap justify-content-center mt-4">
+    <div id="categories" class="d-flex flex-wrap justify-content-center mt-4 ">
         {% for category in categories %}
             <div class="category-container text-center mb-2 p-0">
                 <button class="category-btn btn" data-id="{{ category.id }}">
@@ -53,21 +52,36 @@
         {% endfor %}
     </div>
 
+
+
     <!-- Список блюд -->
     <div id="dishes" class="mt-4">
         <p class="text-center">Выберите категорию, чтобы увидеть блюда.</p>
     </div>
 
+    <!-- Блок с социальными сетями -->
+    <div class="social-links d-flex justify-content-center mt-4">
+        <a href="https://t.me/siroj_hanafiy" target="_blank" class="mx-3 text-decoration-none">
+            <i class="fab fa-telegram fa-2x" style="color: #0088cc;"></i>
+        </a>
+        <a href="https://www.instagram.com/buxoropremium_chirchik/" target="_blank" class="mx-3 text-decoration-none">
+            <i class="fab fa-instagram fa-2x"
+               style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+        </a>
+    </div>
+
+    <div id="pagination" class="mt-4"></div>
+
 {% endblock dashboard %}
 
 <script>
     $(document).ready(function () {
-        // Получаем блюда по категориям
-        $('.category-btn').click(function () {
-            let categoryId = $(this).data('id');
+        let currentPage = 1;
+        let categoryId = null;
 
+        function loadDishes(categoryId, page = 1) {
             $.ajax({
-                url: "{% url 'load_dishes' 0 %}".replace("0", categoryId),
+                url: "{% url 'load_dishes' 0 %}".replace("0", categoryId) + `?page=${page}`,
                 method: "GET",
                 success: function (response) {
                     let dishes = response.dishes;
@@ -75,49 +89,78 @@
 
                     if (dishes.length > 0) {
                         dishes.forEach(function (dish) {
-                            // Проверяем поле is_available
                             if (dish.is_available) {
                                 dishesHtml += `
-                    <div class="col-12 col-md-6 col-lg-4 mb-2 p-0">
-                        <div class="card h-100 dish-card p-2">
-                            <div class="dish-image-container">
-                                <img src="${dish.image_url}" alt="${dish.name}" class="dish-image">
-                            </div>
-                            <div class="dish-info">
-                                <h5 class="dish-title">${dish.name}</h5>
-                                <p class="dish-description">${dish.description}</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="dish-price">${dish.price} Sum</span>
-                                    <button class="btn btn add-to-cart-btn" data-dish-id="${dish.id}" title="Добавить блюдо">
-                                        <i class="fas fa-shopping-cart fa-lg"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
+                                <div class="col-12 col-md-6 col-lg-3 mb-2 p-0">
+                                    <div class="card h-100 dish-card p-2">
+                                        <div class="dish-image-container">
+                                            <img src="${dish.image_url}" alt="${dish.name}" class="dish-image">
+                                        </div>
+                                        <div class="dish-info">
+                                            <h5 class="dish-title">${dish.name}</h5>
+                                            <p class="dish-description">${dish.description}</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="dish-price">${dish.price} Sum</span>
+                                                <button class="btn btn add-to-cart-btn" data-dish-id="${dish.id}" title="Добавить блюдо">
+                                                    <i class="fas fa-shopping-cart fa-lg"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`;
                             }
                         });
-                    }
-
-                    // Если нет доступных блюд
-                    if (!dishesHtml) {
+                    } else {
                         dishesHtml = '<p class="text-center">Нет доступных блюд в этой категории.</p>';
                     }
 
                     $('#dishes').html(dishesHtml);
+
+                    // Обновляем пагинацию
+                    let paginationHtml = `
+                    <nav class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item ${!response.has_previous ? 'disabled' : ''}">
+                                <a class="page-link prev-page" href="#" aria-label="Previous">&laquo;</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">Страница ${response.current_page} из ${response.total_pages}</span>
+                            </li>
+                            <li class="page-item ${!response.has_next ? 'disabled' : ''}">
+                                <a class="page-link next-page" href="#" aria-label="Next">&raquo;</a>
+                            </li>
+                        </ul>
+                    </nav>`;
+                    $('#pagination').html(paginationHtml);
                 }
             });
+        }
 
-            // Скрываем логотип при клике на категорию
-            $('#restaurant-logo').fadeOut(300);  // Плавное скрытие логотипа
+        // Загружаем блюда при выборе категории
+        $('.category-btn').click(function () {
+            categoryId = $(this).data('id');
+            currentPage = 1; // Сбрасываем на первую страницу
+            loadDishes(categoryId, currentPage);
+
+            $('#restaurant-logo').fadeOut(300); // Скрываем логотип
         });
 
-        // Показываем логотип, если нужно вернуться к категориям
-        $(document).on('click', '#show-all-categories', function () {
-            $('#restaurant-logo').fadeIn(300);  // Плавное появление логотипа
+        // Обработка кнопок пагинации
+        $(document).on('click', '.prev-page', function (e) {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                loadDishes(categoryId, currentPage);
+            }
         });
 
-        // Добавление в корзину
+        $(document).on('click', '.next-page', function (e) {
+            e.preventDefault();
+            currentPage++;
+            loadDishes(categoryId, currentPage);
+        });
+
+        // Добавление в корзину (делегирование событий)
         $(document).on('click', '.add-to-cart-btn', function () {
             var dishId = $(this).data('dish-id');
 
@@ -167,6 +210,5 @@
         }
     });
 </script>
-
 </body>
 </html>
