@@ -21,7 +21,7 @@ def load_dishes(request, category_id):
 
         # Параметры пагинации
         page_number = request.GET.get('page', 1)  # Текущая страница (по умолчанию 1)
-        items_per_page = 8  # Количество блюд на страницу
+        items_per_page = 10  # Количество блюд на страницу
 
         paginator = Paginator(dishes, items_per_page)  # Создаем пагинатор
         page_obj = paginator.get_page(page_number)  # Получаем страницу
