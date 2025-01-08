@@ -10,4 +10,4 @@
 *.pyc
 *.pyo
 __pycache__/
-/db/
+db.sqlite3/
