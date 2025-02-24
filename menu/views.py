@@ -1,7 +1,9 @@
-from .models import Category, Dish, Restaurant
-from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render, redirect
+
+from .models import Category, Dish, Restaurant
 
 
 def menu_view(request):
@@ -21,7 +23,7 @@ def load_dishes(request, category_id):
 
         # Параметры пагинации
         page_number = request.GET.get('page', 1)  # Текущая страница (по умолчанию 1)
-        items_per_page = 10  # Количество блюд на страницу
+        items_per_page = 12  # Количество блюд на страницу
 
         paginator = Paginator(dishes, items_per_page)  # Создаем пагинатор
         page_obj = paginator.get_page(page_number)  # Получаем страницу
@@ -51,28 +53,24 @@ def load_dishes(request, category_id):
         return JsonResponse({'error': 'Категория не найдена'}, status=404)
 
 
-# views.py
-
-
 def add_to_cart(request, dish_id):
     try:
-        dish = Dish.objects.get(id=dish_id, is_available=True)  # Проверяем доступность блюда
+        dish = Dish.objects.get(id=dish_id, is_available=True)
         cart = request.session.get('cart', {})
 
-        # Добавляем блюдо в корзину, если его нет
         if str(dish_id) not in cart:
             cart[str(dish_id)] = {
                 'name': dish.name,
                 'price': str(dish.price),
-                'quantity': 1  # Первоначальное количество
+                'quantity': 1
             }
             message = f"'{dish.name}' добавлено в корзину!"
         else:
             message = f"{dish.name} уже в корзине!"
 
-        request.session['cart'] = cart  # Сохраняем корзину в сессии
+        request.session['cart'] = cart
+        request.session.modified = True  # Добавляем эту строку
 
-        # Считаем общее количество товаров в корзине
         total_quantity = sum(item['quantity'] for item in cart.values())
         return JsonResponse({'success': True, 'message': message, 'total_quantity': total_quantity})
 
@@ -81,49 +79,38 @@ def add_to_cart(request, dish_id):
 
 
 def view_cart(request):
-    # Получаем корзину из сессии
     cart = request.session.get('cart', {})
 
-    # Если корзина пуста, отображаем соответствующее сообщение
-    if not cart:
-        return render(request, 'view_cart.html', {'cart': {}, 'total_price': 0, 'message': 'Ваша корзина пуста!'})
+    total_price = 0
+    for item in cart.values():
+        total_price += float(item['price']) * item['quantity']
 
-    # Рассчитываем общую сумму корзины
-    total_price = sum(float(item['price']) * item['quantity'] for item in cart.values())
-
-    # Отправляем данные корзины и общей суммы в шаблон
     context = {
         'cart': cart,
         'total_price': total_price,
     }
+
     return render(request, 'view_cart.html', context)
 
 
 def update_cart(request):
     try:
-        # Получаем данные из запроса
-        dish_id = request.POST.get('dish_id')
+        dish_id = str(request.POST.get('dish_id'))
         quantity = int(request.POST.get('quantity'))
 
-        # Получаем корзину из сессии
         cart = request.session.get('cart', {})
 
-        # Проверяем, есть ли блюдо в корзине
         if dish_id in cart:
-            cart[dish_id]['quantity'] = quantity  # Обновляем количество
+            cart[dish_id]['quantity'] = quantity
+        else:
+            return JsonResponse({'success': False, 'message': f'Блюдо с id {dish_id} не найдено в корзине.'})
 
-        # Пересчитываем общую сумму
         total_price = sum(float(item['price']) * item['quantity'] for item in cart.values())
-
-        # Сохраняем обновленную корзину
         request.session['cart'] = cart
 
-        # Возвращаем обновленную общую сумму
         return JsonResponse({'success': True, 'total_price': total_price})
-
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-
 
 def remove_from_cart(request, dish_id):
     cart = request.session.get('cart', {})
@@ -142,3 +129,138 @@ def get_cart(request):
     total_quantity = sum(item['quantity'] for item in cart.values())
 
     return JsonResponse({'total_quantity': total_quantity})
+
+
+# ------------------------- API views -------------------------------------
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import CategorySerializer, DishSerializer, RestaurantSerializer
+
+
+class RestaurantListView(APIView):
+
+    def get(self, request):
+        restaurants = Restaurant.objects.all()
+        serializer = RestaurantSerializer(restaurants, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CategoryListView(APIView):
+
+    def get(self, request):
+        categories = Category.objects.all().order_by('display_order')
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DishListView(APIView):
+
+    def get(self, request, category_id=None):
+        items_per_page = int(request.GET.get('per_page', 20))  # Кол-во блюд на страницу
+        page_number = int(request.GET.get('page', 1))  # Текущая страница
+
+        if category_id:
+            category = get_object_or_404(Category, id=category_id)
+            dishes = Dish.objects.filter(category=category, is_available=True).order_by('display_order')
+        else:
+            dishes = Dish.objects.filter(is_available=True).order_by('display_order')
+
+        # Пагинация
+        paginator = Paginator(dishes, items_per_page)
+        page_obj = paginator.get_page(page_number)
+
+        serializer = DishSerializer(page_obj, many=True)
+        return Response({
+            'dishes': serializer.data,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous(),
+            'total_pages': paginator.num_pages,
+            'current_page': page_obj.number,
+        }, status=status.HTTP_200_OK)
+
+
+class CartView(APIView):
+
+    def get(self, request):
+        cart = request.session.get('cart', {})
+        total_price = sum(float(item['price']) * item['quantity'] for item in cart.values())
+        return Response({
+            'cart': cart,
+            'total_price': total_price,
+            'message': 'Корзина пуста.' if not cart else 'Корзина содержит товары.'
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        dish_id = request.data.get('dish_id')
+        try:
+            dish = Dish.objects.get(id=dish_id, is_available=True)
+            cart = request.session.get('cart', {})
+
+            if str(dish_id) not in cart:
+                cart[str(dish_id)] = {
+                    'name': dish.name,
+                    'price': str(dish.price),
+                    'quantity': 1
+                }
+                message = f"'{dish.name}' добавлено в корзину!"
+            else:
+                message = f"'{dish.name}' уже в корзине!"
+
+            request.session['cart'] = cart
+            print("Cart after adding: ", cart)  # Логируем корзину
+
+            total_quantity = sum(item['quantity'] for item in cart.values())
+            return Response({'message': message, 'total_quantity': total_quantity}, status=status.HTTP_200_OK)
+        except Dish.DoesNotExist:
+            return Response({'error': 'Блюдо не найдено или недоступно'}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request):
+        dish_id = request.data.get('dish_id')
+        quantity = request.data.get('quantity', 1)
+
+        try:
+            cart = request.session.get('cart', {})
+
+            if str(dish_id) in cart:
+                cart[str(dish_id)]['quantity'] = int(quantity)
+                request.session['cart'] = cart
+                total_price = sum(float(item['price']) * item['quantity'] for item in cart.values())
+                return Response({'message': 'Количество обновлено', 'total_price': total_price},
+                                status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Товар не найден в корзине'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        dish_id = request.data.get('dish_id')
+
+        try:
+            cart = request.session.get('cart', {})
+
+            if str(dish_id) in cart:
+                del cart[str(dish_id)]
+                request.session['cart'] = cart
+                total_price = sum(float(item['price']) * item['quantity'] for item in cart.values())
+                return Response({'message': 'Блюдо удалено из корзины', 'total_price': total_price},
+                                status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Товар не найден в корзине'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BulkDataAPIView(APIView):
+
+    def get(self, request):
+        categories = Category.objects.all()
+        dishes = Dish.objects.all()
+
+        data = {
+            "categories": CategorySerializer(categories, many=True).data,
+            "dishes": DishSerializer(dishes, many=True).data,
+        }
+        return Response(data)

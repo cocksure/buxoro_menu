@@ -5,44 +5,96 @@
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f8f9fa;
-    color: #343a40;
     margin: 0;
+    font-family: 'Arial', sans-serif;
+    color: #343a40;
+    padding-bottom: 100px;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #f8f9fa;
+    padding: 10px 0;
+    text-align: center;
+    border-top: 1px solid #ddd;
+    z-index: 1000;
 }
 
 
-.category-photo {
-    width: 90px;
-    height: 90px;
+.categories {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* расстояние между карточками */
+}
+
+.category-card {
+    position: relative;
+    width: 100%;
+    height: 115px;
+    overflow: hidden;
+    border-radius: 20px;
+}
+
+/* Изображение остается без изменений */
+.category-card img {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    background-color: white;
-    border-radius: 8px;
 }
+
+/* Добавляем оверлей для затемнения изображения */
+.category-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* затемнение, можно регулировать прозрачность */
+    z-index: 1;
+}
+
+/* Название категории позиционируем поверх оверлея */
+.category-card .category-name {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2; /* выше, чем у оверлея */
+    color: #fff;
+    font-size: 1.6rem;
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8); /* улучшает читаемость */
+}
+
+.category-card button {
+    border: none;
+    background: none;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    cursor: pointer;
+}
+
 
 .menu-header {
     background: linear-gradient(45deg, #f3eac3, #e6cc4d);
     border-radius: 10px;
     padding: 5px;
-
 }
 
-.category-container {
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgb(144, 144, 145);
-    margin-left: 2px;
-    margin-right: 2px;
-
-}
 
 .restaurant-banner {
     width: 100%;
-    height: 150px;
+    height: 130px;
     object-fit: cover;
     position: relative;
     top: 7px;
     border-radius: 10px;
-
 }
 
 .shopping-cart-lg {
@@ -77,14 +129,20 @@ body {
 }
 
 .dish-card {
-    display: flex;
-    flex-direction: column;
-    background: linear-gradient(44deg, #ffffff 50%, rgb(152, 176, 228) 100%);
+    background: linear-gradient(44deg, #ffffff 50%, #98b0e4 100%);
     border: 1px solid #ddd;
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 2px 5px rgb(144, 144, 145);
+    box-shadow: 0 2px 5px rgba(144, 144, 145, 0.5);
     height: 100%;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.dish-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .dish-image-container {
@@ -125,25 +183,169 @@ body {
 
 .add-to-cart-btn {
     color: #6f00ff;
+    border: 1px solid #6f00ff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.add-to-cart-btn:hover {
+    background-color: #6f00ff;
+    color: white;
+}
+
+
 #modalDishImage {
-    max-height: 400px; /* Ограничиваем максимальную высоту */
-    object-fit: cover; /* Сохраняем пропорции */
+    max-height: 400px;
+    object-fit: cover;
+}
+
+/* Стили для таблицы */
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(243, 234, 195, 0.1);
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    font-size: 16px;
+}
+
+.table th {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Стили для кнопок изменения количества */
+.change-quantity {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 0;
+    transition: background-color 0.3s ease;
+}
+
+.change-quantity:hover {
+    background-color: #e9ecef;
+}
+
+/* Стили для кнопки удаления */
+.delete-btn {
+    font-size: 1.2rem;
+    transition: color 0.3s ease;
+}
+
+.delete-btn:hover {
+    color: #dc3545 !important;
+}
+
+/* Стили для общей суммы */
+#total-price {
+    font-weight: bold;
+    color: #28a745;
+    font-size: 1.5rem;
+}
+
+
+/* Основные стили для страницы корзины */
+.cart-page {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-to-cart-btn.added {
+    background-color: #34c759;
+    color: white;
+}
+
+.fixed-bottom {
+    position: fixed;
+    bottom: 5px; /* Отступ 10px от нижнего края экрана */
+    left: 5px;
+    right: 5px;
+    text-align: center;
+    z-index: 9999;
+    padding: 10px 0;
+}
+
+/* Общий стиль для страницы корзины */
+.cart-page {
+    padding-bottom: 80px; /* Отступ снизу, чтобы не перекрывал фиксированный нижний блок */
+}
+
+/* Ограничение высоты таблицы корзины с возможностью прокрутки, если блюд много */
+.table-responsive-cart {
+    max-height: 400px; /* Максимальная высота таблицы (можно настроить по вкусу) */
+    overflow-y: auto; /* Вертикальная прокрутка при переполнении */
+    margin-bottom: 20px; /* Отступ снизу таблицы */
+}
+
+/* Форматирование заголовков таблицы */
+.table thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+/* Стили для строк корзины (при необходимости можно добавить hover-эффект) */
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f2f2f2;
+}
+
+/* Фиксированная кнопка "Вернуться к меню" внизу экрана */
+.fixed-bottom {
+    position: fixed;
+    bottom: 10px; /* Отступ 10px от нижнего края */
+    left: 10px;
+    right: 10px;
+    z-index: 9999;
+    text-align: center;
+    padding: 10px 0;
+    background-color: #fff; /* Фон, чтобы не сливался с содержимым */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Модальное окно - ограничение высоты тела и прокрутка, если блюд много */
+.modal-body {
+    max-height: 500px; /* Задайте нужную высоту */
+    overflow-y: auto; /* Вертикальная прокрутка внутри модалки */
+}
+
+
+/* Немного увеличим отступы для кнопок изменения количества и удаление */
+.btn-outline-secondary.change-quantity {
+    margin: 0 1px;
+}
+
+.delete-btn {
+    font-size: 1rem;
+}
+
+/* Уменьшаем шрифт в таблице */
+.table td, .table th {
+    font-size: 0.8rem;
+}
+
+/* Уменьшаем шрифт внутри модального окна */
+.modal-content,
+.modal-body {
+    font-size: 0.8rem; /* можно изменить на нужное значение */
 }
 
 @media (max-width: 767px) {
+
     #categories {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 1px;
     }
 
-
     .category-btn {
-        width: 100%; /* Задайте кнопку на всю ширину ячейки */
+        width: 100%;
     }
-
 
     .dish-card {
         flex-direction: row;
@@ -204,35 +406,19 @@ body {
 
 @media (min-width: 1198px) {
     .restaurant-banner {
-        min-height: 300px;
-    }
-
-    #dishes {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 5px;
+        min-height: 250px;
     }
 
 
-    .dish-card {
-        min-width: 300px;
-        box-sizing: border-box;
+   .categories {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center; /* или space-between, если нужно */
     }
-
-    .dish-title {
-        font-size: 1.4rem;
-    }
-
-    .dish-description {
-        font-size: 1rem;
-    }
-
-    .dish-price {
-        font-size: 1.2rem;
-    }
-
-    .add-to-cart-btn {
-        padding: 8px 12px;
-        font-size: 1.1rem;
+    .category-card {
+        flex: 0 0 330px; /* фиксированная ширина карточки, можно изменить по вкусу */
+        height: 120px;  /* фиксированная высота, как и раньше */
     }
 }
