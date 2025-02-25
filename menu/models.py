@@ -1,10 +1,38 @@
 import os
-from PIL import Image
-from django.db import models
-from django.core.validators import FileExtensionValidator
 from io import BytesIO
-from django.core.files.base import ContentFile
 
+from PIL import Image
+from django.core.files.base import ContentFile
+from django.core.validators import FileExtensionValidator
+from django.db import models
+
+
+def process_image(image, upload_path, quality=60, max_size=(1024, 1024)):
+    """Функция для обработки изображения: ресайз, конвертация в WebP, оптимизация."""
+    try:
+        img = Image.open(image)
+
+        # Проверяем поддержку форматов
+        if img.format.lower() not in ['jpg', 'jpeg', 'png', 'webp']:
+            raise ValueError(f"Неподдерживаемый формат изображения: {img.format}")
+
+        output = BytesIO()
+
+        # Ограничение разрешения изображения
+        if img.width > max_size[0] or img.height > max_size[1]:
+            img.thumbnail(max_size, Image.LANCZOS)
+
+        # Сохранение с оптимизацией
+        img.save(output, format='WEBP', quality=quality, optimize=True)
+        output.seek(0)
+
+        # Сохраняем изображение в указанную папку
+        new_image_name = os.path.splitext(image.name)[0] + '.webp'
+
+        return new_image_name, ContentFile(output.read())
+
+    except Exception as e:
+        raise ValueError(f"Ошибка при обработке изображения: {e}")
 
 
 class Category(models.Model):
@@ -21,38 +49,16 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         if self.image:
-            try:
-                # Открываем изображение
-                img = Image.open(self.image)
+            new_name, new_file = process_image(self.image, "category_images/")
 
-                # Проверяем формат изображения
-                if img.format.lower() not in ['jpg', 'jpeg', 'png', 'webp']:
-                    raise ValueError(f"Неподдерживаемый формат изображения: {img.format}")
+            if self.pk:
+                old_instance = self.__class__.objects.get(pk=self.pk)
+                if old_instance.image and old_instance.image != self.image:
+                    default_image_path = 'default_images/default_foto.png'
+                    if old_instance.image.name != default_image_path:
+                        old_instance.image.delete(save=False)
 
-                # Если изображение уже в формате WebP, пропускаем конвертацию
-                if img.format.lower() != 'webp':
-                    # Конвертируем изображение в WebP
-                    output = BytesIO()
-                    img.save(output, format='WEBP', quality=85)  # Качество 85%
-                    output.seek(0)
-
-                    # Удаляем старое изображение, если оно было
-                    if self.pk:
-                        old_instance = self.__class__.objects.get(pk=self.pk)
-                        if old_instance.image and old_instance.image != self.image:
-                            old_instance.image.delete(save=False)
-
-                    # Сохраняем новое изображение
-                    self.image.save(
-                        os.path.splitext(self.image.name)[0] + '.webp',  # Меняем расширение на .webp
-                        ContentFile(output.read()),
-                        save=False
-                    )
-
-            except Exception as e:
-                # Логируем ошибку, если что-то пошло не так
-                print(f"Ошибка при обработке изображения: {e}")
-                raise
+            self.image.save(new_name, new_file, save=False)
 
         super().save(*args, **kwargs)
 
@@ -80,37 +86,18 @@ class Dish(models.Model):
     is_available = models.BooleanField(default=True, verbose_name="Доступно ли блюдо?")
     display_order = models.PositiveIntegerField(default=0, verbose_name="Порядок отображения")
 
-
     def save(self, *args, **kwargs):
         if self.image:
-            try:
-                img = Image.open(self.image)
+            new_name, new_file = process_image(self.image, "dish_images/")
 
-                if img.format.lower() not in ['jpg', 'jpeg', 'png', 'webp']:
-                    raise ValueError(f"Неподдерживаемый формат изображения: {img.format}")
+            if self.pk:
+                old_instance = self.__class__.objects.get(pk=self.pk)
+                if old_instance.image and old_instance.image != self.image:
+                    default_image_path = 'default_images/default_foto.png'
+                    if old_instance.image.name != default_image_path:
+                        old_instance.image.delete(save=False)
 
-                if img.format.lower() != 'webp':
-                    output = BytesIO()
-                    img.save(output, format='WEBP', quality=85)
-                    output.seek(0)
-
-                    if self.pk:
-                        old_instance = self.__class__.objects.get(pk=self.pk)
-                        if old_instance.image and old_instance.image != self.image:
-                            # Проверяем, не является ли старое изображение файлом по умолчанию
-                            default_image_path = os.path.join('default_images', 'default_foto.png')
-                            if old_instance.image.name != default_image_path:
-                                old_instance.image.delete(save=False)
-
-                    self.image.save(
-                        os.path.splitext(self.image.name)[0] + '.webp',
-                        ContentFile(output.read()),
-                        save=False
-                    )
-
-            except Exception as e:
-                print(f"Ошибка при обработке изображения: {e}")
-                raise
+            self.image.save(new_name, new_file, save=False)
 
         super().save(*args, **kwargs)
 
@@ -170,6 +157,3 @@ class Restaurant(models.Model):
     class Meta:
         verbose_name = "Ресторан"
         verbose_name_plural = "Рестораны"
-
-
-#
