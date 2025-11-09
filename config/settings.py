@@ -10,8 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env(BASE_DIR / '.env')
 
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = env('DEBUG', default=False)
+# DEBUG = env('DEBUG', default=False)
+DEBUG = True
+
 TELEGRAM_TOKEN = env('TELEGRAM_TOKEN')
+
+
 # OPENAI_API_KEY = env('OPENAI_API_KEY')
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = [
@@ -31,6 +35,7 @@ INSTALLED_APPS = [
     'menu',
     'corsheaders',
     'rest_framework',
+    'django.contrib.humanize'
 
 ]
 
@@ -117,14 +122,40 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static'
-]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+if DEBUG:
+    # Настройки для разработки
+    STATICFILES_DIRS = [BASE_DIR / 'static']
+    # В DEBUG режиме staticfiles будет работать без collectstatic
+    STATIC_ROOT = BASE_DIR / 'staticfiles'  # отдельная папка для collectstatic (если понадобится)
+else:
+    # Настройки для продакшена
+    STATICFILES_DIRS = []
+    STATIC_ROOT = BASE_DIR / 'static'
+
+# Версионирование статических файлов (Django 4.2+)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        # В DEBUG используем обычный StaticFilesStorage
+        # В production - ManifestStaticFilesStorage для cache busting
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG
+                   else "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
+
+# Media files (User uploads)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = env('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
+
+MEDIA_DIRS = [
+    BASE_DIR / 'media',
+]
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DEFAULT_CHARSET = 'utf-8'

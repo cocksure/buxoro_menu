@@ -3,11 +3,11 @@
 
 {% block content %}
 	<body class="container cart-page">
-	<h1 class="text-center my-4">Ваш выбор</h1>
+	<h1 class="text-light text-center my-4">Ваш выбор</h1>
 
 	{% if cart %}
 		<div class="table-responsive">
-			<table class="table table-striped">
+			<table class="table">
 				<thead>
 				<tr>
 					<th>Название</th>
@@ -46,16 +46,16 @@
 			</table>
 		</div>
 
-		<h3 class="text-right">
+		<h3 class="text-right text-light">
 			Общая сумма: <span id="total-price">{{ total_price|floatformat:2 }}</span> <span class="currency">Sum</span>
 		</h3>
 	{% else %}
 		<div class="text-center my-5">
-			<p class="text-muted">Ваша корзина пуста.</p>
+			<p class="text-light">Ваша корзина пуста.</p>
 		</div>
 	{% endif %}
 
-	<a href="{% url 'menu' %}" class="btn btn-secondary bg-secondary text-center d-block mt-4 fixed-bottom">Вернуться к
+	<a href="{% url 'menu' %}" class="btn btn-dark text-center d-block mt-4 fixed-bottom">Вернуться к
 		меню</a>
 	</body>
 
