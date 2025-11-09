@@ -5,10 +5,10 @@ from . import views
 from .views import RestaurantListView, CategoryListView, DishListView, CartView
 
 urlpatterns = [
-    # path('', views.menu_view, name='menu'),
-    path('',
-         RedirectView.as_view(url="https://drive.google.com/file/d/1wpnpjVcngdfbC5bVcChzYHY4oRZuRUvW/view?usp=sharing",
-                              permanent=False), name="menu"),
+    path('', views.menu_view, name='menu'),
+    # path('',
+    #      RedirectView.as_view(url="https://drive.google.com/file/d/1wpnpjVcngdfbC5bVcChzYHY4oRZuRUvW/view?usp=sharing",
+    #                           permanent=False), name="menu"),
 
     path('load-dishes/<int:category_id>/', views.load_dishes, name='load_dishes'),
     path('add-to-cart/<int:dish_id>/', views.add_to_cart, name='add_to_cart'),
@@ -16,6 +16,7 @@ urlpatterns = [
     path('remove-from-cart/<int:dish_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('update_cart/', views.update_cart, name='update_cart'),
     path('get-cart/', views.get_cart, name='get_cart'),
+    path('update-dish/', views.update_dish, name='update_dish'),
 
     # ----- API urls ---------
     path('api/restaurants/', RestaurantListView.as_view(), name='restaurant_list'),

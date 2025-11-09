@@ -64,12 +64,17 @@
                 $('#dishes').empty();
                 $('#pagination').empty();
 
-                // Показываем категории
+                // Показываем категории и скрываем поиск и кнопку "Назад"
                 $('.categories, #restaurant-logo').fadeIn(300);
+                $('.search-container-header').fadeOut(200);
+                $('.menu-title').fadeOut(200, function() {
+                    $(this).addClass('d-none');
+                });
+                $('#dish-search').val('');
+                $('#clear-search').hide();
 
                 // Сбрасываем состояние
                 this.config.categoryId = null;
-                $('.menu-title h2').text('Меню');
             },
 
             /**
@@ -82,6 +87,91 @@
                 $(document).on('click', '.prev-page', this.onPrevPageClick.bind(this));
                 $(document).on('click', '.next-page', this.onNextPageClick.bind(this));
                 $(document).on('click', '.menu-title', this.onMenuTitleClick.bind(this));
+
+                // Обработчики для поиска
+                $('#dish-search').on('input', this.debounce(this.onSearchInput.bind(this), 300));
+                $('#clear-search').on('click', this.onClearSearch.bind(this));
+            },
+
+            /**
+             * Debounce функция для оптимизации поиска
+             */
+            debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            },
+
+            /**
+             * Обработчик ввода в поисковую строку
+             */
+            onSearchInput(e) {
+                const searchTerm = $(e.target).val().toLowerCase().trim();
+
+                if (searchTerm.length > 0) {
+                    $('#clear-search').fadeIn(200);
+                    this.filterDishes(searchTerm);
+                } else {
+                    $('#clear-search').fadeOut(200);
+                    this.showAllDishes();
+                }
+            },
+
+            /**
+             * Очистка поискового запроса
+             */
+            onClearSearch() {
+                $('#dish-search').val('').focus();
+                $('#clear-search').fadeOut(200);
+                this.showAllDishes();
+            },
+
+            /**
+             * Фильтрация блюд по поисковому запросу
+             */
+            filterDishes(searchTerm) {
+                let visibleCount = 0;
+
+                $('.dish-card').each(function() {
+                    const dishName = $(this).find('.dish-title').text().toLowerCase();
+                    const dishDesc = $(this).find('.dish-description').text().toLowerCase();
+
+                    if (dishName.includes(searchTerm) || dishDesc.includes(searchTerm)) {
+                        $(this).parent().fadeIn(300);
+                        visibleCount++;
+                    } else {
+                        $(this).parent().fadeOut(300);
+                    }
+                });
+
+                // Показываем сообщение если ничего не найдено
+                if (visibleCount === 0 && $('.dish-card').length > 0) {
+                    if ($('#no-results').length === 0) {
+                        $('#dishes').append(`
+                            <div id="no-results" class="col-12 text-center p-5">
+                                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                <h4>Ничего не найдено</h4>
+                                <p class="text-muted">Попробуйте изменить поисковый запрос</p>
+                            </div>
+                        `);
+                    }
+                } else {
+                    $('#no-results').remove();
+                }
+            },
+
+            /**
+             * Показать все блюда
+             */
+            showAllDishes() {
+                $('.dish-card').parent().fadeIn(300);
+                $('#no-results').remove();
             },
 
             /**
@@ -183,7 +273,14 @@
             onDishImageClick(e) {
                 const imageUrl = $(e.currentTarget).attr('src');
                 $('#modalDishImage').attr('src', imageUrl);
-                $('#dishModal').modal('show');
+
+                // Bootstrap 5 способ открытия модального окна
+                const modalElement = document.getElementById('dishModal');
+                const modal = new bootstrap.Modal(modalElement, {
+                    keyboard: true,
+                    backdrop: true
+                });
+                modal.show();
             },
 
             /**
@@ -276,13 +373,13 @@
                 // Формируем HTML для блюд
                 const dishesHtml = response.dishes.map(dish => `
                     <div class="col">
-                        <div class="card h-80 dish-card p-2 mb-2" data-dish-id="${dish.id}">
+                        <div class="card h-70 dish-card" data-dish-id="${dish.id}">
                             <div class="dish-image-container">
                                 <img src="${dish.image_url || '/static/images/no-image.png'}"
                                      alt="${this.escapeHtml(dish.name)}"
                                      class="dish-image"
                                      loading="lazy"
-                                     onerror="this.src='/static/images/no-image.png'">
+                                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%27%23f0f0f0%27 width=%27400%27 height=%27300%27/%3E%3Ctext fill=%27%23999%27 font-family=%27sans-serif%27 font-size=%2724%27 dy=%2710.5%27 font-weight=%27bold%27 x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27%3E%D0%9D%D0%B5%D1%82 %D1%84%D0%BE%D1%82%D0%BE%3C/text%3E%3C/svg%3E';">
                             </div>
                             <div class="dish-info">
                                 <h5 class="dish-title">${this.escapeHtml(dish.name)}</h5>
@@ -309,8 +406,9 @@
                 // Анимация появления блюд
                 this.animateDishes(response.dishes);
 
-                // Обновляем заголовок
-                $('.menu-title h2').text('Назад');
+                // Показываем поиск и кнопку "Назад"
+                $('.search-container-header').fadeIn(300);
+                $('.menu-title').removeClass('d-none').fadeIn(300);
             },
 
             /**
@@ -394,10 +492,25 @@
             },
 
             /**
-             * Показать индикатор загрузки
+             * Показать индикатор загрузки (Skeleton)
              */
             showLoadingIndicator() {
-                $('#dishes').html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>');
+                const skeletonCount = 6; // Количество skeleton карточек
+                const skeletonHtml = Array(skeletonCount).fill(0).map(() => `
+                    <div class="col">
+                        <div class="skeleton-dish-card">
+                            <div class="skeleton-image"></div>
+                            <div class="skeleton-info">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-description"></div>
+                                <div class="skeleton skeleton-description" style="width: 80%;"></div>
+                                <div class="skeleton skeleton-price"></div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                $('#dishes').html(skeletonHtml);
             },
 
             /**

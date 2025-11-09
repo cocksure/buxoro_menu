@@ -44,10 +44,14 @@
         var loadDishesUrl = "{% url 'load_dishes' 0 %}";
         var addToCartUrl = "{% url 'add_to_cart' 0 %}";
         var getCartUrl = "{% url 'get_cart' %}";
+
+        // Режим редактирования
+        var isEditMode = {{ is_edit_mode|yesno:"true,false" }};
+        var editSecretKey = "{{ request.GET.edit|default:'' }}";
 	</script>
 </head>
 
-<body class="container">
+<body class="container-fluid">
 {% block content %}
 {% endblock %}
 
@@ -57,8 +61,8 @@
 		<img src="{{ restaurant.image.url }}" alt="{{ restaurant.name }}" id="restaurant-logo"
 		     class="restaurant-banner">
 
-		<!-- Ряд с корзиной и социальными сетями -->
-		<div class="menu-header d-flex justify-content-between align-items-center">
+		<!-- Ряд с корзиной и поиском -->
+		<div class="menu-header d-flex justify-content-between align-items-center gap-2">
 			<a href="{% url 'view_cart' %}" class="cart-link text-dark position-relative">
 				<i class="fas fa-shopping-cart shopping-cart-lg"></i>
 				<span id="cart-count"
@@ -67,39 +71,23 @@
             </span>
 			</a>
 
-			<!-- Социальные сети и адрес из Restaurant -->
-			<div class="header-social-links d-flex align-items-center gap-3">
-				<!-- DEBUG: Restaurant={{ restaurant }}, Instagram={{ restaurant.instagram }}, Telegram={{ restaurant.telegram }}, Phone={{ restaurant.phone }} -->
-
-				{% if restaurant %}
-					{% if restaurant.instagram %}
-					<a href="{{ restaurant.instagram }}" target="_blank" class="header-social-icon" aria-label="Instagram">
-						<i class="fab fa-instagram"></i>
-					</a>
-					{% endif %}
-
-					{% if restaurant.telegram %}
-					<a href="{{ restaurant.telegram }}" target="_blank" class="header-social-icon" aria-label="Telegram">
-						<i class="fab fa-telegram "></i>
-					</a>
-					{% endif %}
-
-					{% if restaurant.phone %}
-					<a href="tel:{{ restaurant.phone }}" class="header-social-icon" aria-label="Позвонить">
-						<i class="fas fa-phone"></i>
-					</a>
-					{% endif %}
-				{% else %}
-					<!-- NO RESTAURANT DATA -->
-				{% endif %}
-
-				<a href="{% url 'menu' %}" class="menu-title m-0 text-dark d-none">
-					<h2>Назад</h2>
-				</a>
+			<!-- Поисковая строка (скрыта по умолчанию) -->
+			<div class="search-container-header" style="display: none;">
+				<div class="search-box-header">
+					<i class="fas fa-search search-icon-header"></i>
+					<input type="text" id="dish-search" class="search-input-header" placeholder="Поиск...">
+					<button id="clear-search" class="clear-search-btn-header" style="display: none;">
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
 			</div>
+
+			<a href="{% url 'menu' %}" class="menu-title m-0 text-dark d-none">
+				<i class="fas fa-arrow-left"></i>
+			</a>
 		</div>
 	</div>
-
+	<div class="container">
 	<!-- Список категорий -->
 	<div class="categories mt-3">
 		{% for category in categories %}
@@ -127,26 +115,88 @@
 	<!-- Пагинация -->
 	<div id="pagination" class="mt-4 mb-5"></div>
 
-	<!-- Модальное окно для изображения блюда -->
-	<div class="modal fade" id="dishModal" tabindex="-1" aria-labelledby="dishModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-				</div>
-				<div class="modal-body text-center">
-					<img src="" id="modalDishImage" class="img-thumbnail w-100" alt="Блюдо">
-				</div>
-			</div>
+	<!-- Модальное окно для изображения блюда (кастомное) -->
+	<div id="dishModal" class="custom-modal" style="display: none;">
+		<div class="custom-modal-backdrop"></div>
+		<div class="custom-modal-content">
+			<button type="button" class="custom-modal-close" aria-label="Закрыть">
+				<i class="fas fa-times"></i>
+			</button>
+			<img src="" id="modalDishImage" class="custom-modal-image" alt="Блюдо">
 		</div>
 	</div>
 
-	<!-- Footer section with your Instagram link -->
+	<!-- Модальное окно редактирования блюда -->
+	<div id="editDishModal" class="custom-modal" style="display: none;">
+		<div class="edit-modal-backdrop custom-modal-backdrop"></div>
+		<div class="edit-modal-content">
+
+			<div class="edit-modal-body">
+				<h3 class="mb-4"><i class="fas fa-edit"></i> Редактировать блюдо</h3>
+				<form id="edit-dish-form" enctype="multipart/form-data">
+					{% csrf_token %}
+					<input type="hidden" id="edit-dish-id" name="dish_id">
+
+					<div class="form-group mb-1">
+						<label for="edit-dish-name">Название</label>
+						<input type="text" id="edit-dish-name" name="name" class="form-control" required>
+					</div>
+
+					<div class="form-group mb-1">
+						<label for="edit-dish-description">Описание</label>
+						<textarea id="edit-dish-description" name="description" class="form-control" rows="1"></textarea>
+					</div>
+
+					<div class="form-group mb-1">
+						<label for="edit-dish-price">Цена (Sum)</label>
+						<input type="number" id="edit-dish-price" name="price" class="form-control" step="0.01" required>
+					</div>
+
+					<div class="form-group mb-1">
+						<label for="edit-dish-image ">Изображение</label>
+						<input type="file" id="edit-dish-image" name="image" class="form-control text-center" accept="image/*">
+						<div class="text-center">
+							<img id="edit-dish-image-preview" src="" alt="Preview" class="mt-2" style="max-width: 180px;  max-height: 180px; display: none;">
+						</div>
+					</div>
+
+					<div class="form-check mb-1">
+						<input type="checkbox" id="edit-dish-available" name="is_available" class="form-check-input">
+						<label for="edit-dish-available" class="form-check-label">В наличии (показывать в меню)</label>
+					</div>
+
+					<div class="d-flex gap-2 justify-content-end">
+						<button type="button" class="btn btn-secondary edit-modal-close">Отмена</button>
+						<button type="submit" class="btn btn-primary">Сохранить</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+	<!-- Footer с социальными сетями -->
 	<footer class="text-center border-top">
-		<p class="mb-0">Created by
-			<a href="https://www.instagram.com/__maxmudov/" target="_blank" class="text-primary text-decoration-none">Sanjar
-				Maxmudov</a>
-		</p>
+		<div class="footer-social-links d-flex justify-content-center align-items-center gap-3">
+			{% if restaurant %}
+				{% if restaurant.instagram %}
+				<a href="{{ restaurant.instagram }}" target="_blank" class="footer-social-icon" aria-label="Instagram">
+					<i class="fab fa-instagram"></i>
+				</a>
+				{% endif %}
+
+				{% if restaurant.telegram %}
+				<a href="{{ restaurant.telegram }}" target="_blank" class="footer-social-icon" aria-label="Telegram">
+					<i class="fab fa-telegram"></i>
+				</a>
+				{% endif %}
+
+				{% if restaurant.phone %}
+				<a href="tel:{{ restaurant.phone }}" class="footer-social-icon" aria-label="Позвонить">
+					<i class="fas fa-phone"></i>
+				</a>
+				{% endif %}
+			{% endif %}
+		</div>
 	</footer>
 
 {% endblock dashboard %}

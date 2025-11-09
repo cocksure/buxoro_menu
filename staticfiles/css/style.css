@@ -52,10 +52,11 @@ body {
     margin: 0;
     font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     color: var(--text-dark);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
     background-attachment: fixed;
+    background-color: whitesmoke;
     min-height: 100vh;
-    padding-bottom: 100px;
+    padding-bottom: 10px;
     line-height: 1.6;
 }
 
@@ -78,8 +79,6 @@ body {
     backdrop-filter: blur(20px);
     padding: 6px;
     margin-bottom: 8px;
-    border-radius: var(--border-radius-sm);
-    box-shadow: var(--shadow-md);
 }
 
 #restaurant-logo {
@@ -148,9 +147,37 @@ body {
     color: #34c759;
 }
 
-/* Кнопка Назад - скрыта по умолчанию */
+/* Кнопка Назад - иконка стрелки */
+.menu-title {
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.1);
+}
+
 .menu-title.d-none {
     display: none !important;
+}
+
+.menu-title i {
+    font-size: 1.3rem;
+    color: var(--primary-color);
+    transition: var(--transition);
+}
+
+.menu-title:hover {
+    background: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.menu-title:hover i {
+    color: white;
 }
 
 .cart-link {
@@ -206,6 +233,74 @@ body {
 
 
 /* ========================================
+   ПОИСК В HEADER (КОМПАКТНЫЙ)
+   ======================================== */
+.search-container-header {
+    flex: 1;
+    max-width: 400px;
+    margin-left: 16px;
+}
+
+.search-box-header {
+    position: relative;
+    width: 100%;
+}
+
+.search-input-header {
+    width: 100%;
+    padding: 8px 35px 8px 35px;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    transition: var(--transition);
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.search-input-header:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-icon-header {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-color);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.clear-search-btn-header {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: var(--transition);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.clear-search-btn-header:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    transform: translateY(-50%) scale(1.1);
+}
+
+
+/* ========================================
    КАТЕГОРИИ
    ======================================== */
 .categories {
@@ -213,6 +308,7 @@ body {
     flex-direction: column;
     gap: 10px;
     margin-top: 10px;
+    scroll-margin-top: 200px;
 }
 
 .category-card {
@@ -281,6 +377,84 @@ body {
     height: 100%;
     padding: 0;
     cursor: pointer;
+}
+
+
+/* ========================================
+   SKELETON LOADER
+   ======================================== */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-dish-card {
+    background: #ffffff;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    padding: 0;
+}
+
+.skeleton-image {
+    width: 100%;
+    height: 220px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+.skeleton-info {
+    padding: 20px;
+}
+
+.skeleton-title {
+    height: 24px;
+    width: 70%;
+    margin-bottom: 12px;
+    border-radius: 8px;
+}
+
+.skeleton-description {
+    height: 16px;
+    width: 100%;
+    margin-bottom: 8px;
+    border-radius: 8px;
+}
+
+.skeleton-price {
+    height: 20px;
+    width: 40%;
+    margin-top: 16px;
+    border-radius: 8px;
+}
+
+@media (max-width: 767px) {
+    .skeleton-dish-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .skeleton-image {
+        flex: 0 0 140px;
+        height: 140px;
+    }
+
+    .skeleton-info {
+        flex: 1;
+        padding: 12px;
+    }
 }
 
 
@@ -474,8 +648,31 @@ body {
 }
 
 .table-scroll {
-    max-height: 80vh; /* сколько видно по высоте; при необходимости подстрой */
-    overflow: auto;
+    max-height: 60vh; /* сколько видно по высоте; при необходимости подстрой */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Карточка корзины */
+.cart-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 20px;
+    border: none;
+}
+
+/* Контейнер общей суммы */
+.total-price-container {
+    position: sticky;
+    bottom: 70px;
+    background: white;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    margin: 20px 0;
+    z-index: 100;
+    border: 2px solid var(--primary-color);
 }
 
 
@@ -546,22 +743,50 @@ body {
     overflow: hidden;
     border: none;
     box-shadow: var(--shadow-lg);
+    background: transparent;
 }
 
 .modal-header {
-    background: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));
+    background: transparent;
     border-bottom: none;
-    padding: 16px;
+    padding: 10px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 10;
 }
 
 .modal-body {
-    padding: 24px;
+    padding: 0;
+    background: transparent;
 }
 
 #modalDishImage {
-    max-height: 500px;
+    max-height: 80vh;
+    width: 100%;
     object-fit: contain;
-    border-radius: var(--border-radius-sm);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-close-white {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    opacity: 1;
+    transition: var(--transition);
+}
+
+.btn-close-white:hover {
+    background: white;
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+/* Темный фон модального окна */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.85);
 }
 
 
@@ -708,7 +933,7 @@ footer {
     width: 100%;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
-    padding: 8px 0;
+    padding: 10px 0;
     text-align: center;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     z-index: 1000;
@@ -719,6 +944,40 @@ footer p {
     margin: 0;
     font-size: 0.9rem;
     color: var(--text-muted);
+}
+
+/* Социальные иконки в footer */
+.footer-social-links {
+    padding: 0;
+    margin: 0;
+}
+
+.footer-social-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    text-decoration: none;
+    font-size: 1.5rem;
+}
+
+.footer-social-icon:hover {
+    transform: translateY(-3px) scale(1.15);
+}
+
+.footer-social-icon i.fa-instagram {
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.footer-social-icon i.fa-telegram {
+    color: #0088cc;
+}
+
+.footer-social-icon i.fa-phone {
+    color: #34c759;
 }
 
 

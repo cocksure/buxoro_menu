@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -15,9 +16,14 @@ def menu_view(request):
     # Получаем категории
     categories = Category.objects.all().order_by('display_order')
 
+    # Проверяем секретный ключ для режима редактирования
+    edit_key = request.GET.get('edit', '')
+    is_edit_mode = (edit_key == settings.EDIT_SECRET_KEY)
+
     context = {
         'categories': categories,
         'restaurant': restaurant,
+        'is_edit_mode': is_edit_mode,
     }
     return render(request, 'menu.html', context)
 
@@ -307,3 +313,53 @@ class BulkDataAPIView(APIView):
             "dishes": DishSerializer(dishes, many=True).data,
         }
         return Response(data)
+
+
+def update_dish(request):
+    """Обновление данных блюда (только при наличии секретного ключа)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
+
+    # Проверяем секретный ключ
+    edit_key = request.POST.get('edit_key', '')
+    if edit_key != settings.EDIT_SECRET_KEY:
+        return JsonResponse({'error': 'Доступ запрещен'}, status=403)
+
+    try:
+        dish_id = request.POST.get('dish_id')
+        dish = get_object_or_404(Dish, id=dish_id)
+
+        # Обновляем поля
+        dish.name = request.POST.get('name', dish.name)
+        dish.description = request.POST.get('description', dish.description)
+        dish.price = request.POST.get('price', dish.price)
+        dish.is_available = request.POST.get('is_available') == 'on'
+
+        # Обновляем изображение, если загружено новое
+        if 'image' in request.FILES:
+            dish.image = request.FILES['image']
+
+        dish.save()
+
+        # Очищаем кеш для категории этого блюда
+        category_id = dish.category.id
+        cache_pattern = f'dishes_cat_{category_id}_page_*'
+        # Удаляем все кеши для этой категории
+        for i in range(1, 100):  # Предполагаем максимум 100 страниц
+            cache.delete(f'dishes_cat_{category_id}_page_{i}')
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Блюдо "{dish.name}" успешно обновлено!',
+            'dish': {
+                'id': dish.id,
+                'name': dish.name,
+                'description': dish.description,
+                'price': str(dish.price),
+                'image_url': dish.image.url if dish.image else None,
+                'is_available': dish.is_available,
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Ошибка при обновлении: {str(e)}'}, status=500)

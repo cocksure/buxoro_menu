@@ -15,6 +15,9 @@ DEBUG = True
 
 TELEGRAM_TOKEN = env('TELEGRAM_TOKEN')
 
+# Секретный ключ для редактирования меню (можно задать в .env как EDIT_SECRET_KEY)
+EDIT_SECRET_KEY = env('EDIT_SECRET_KEY', default='admin123edit')
+
 
 # OPENAI_API_KEY = env('OPENAI_API_KEY')
 ALLOWED_HOSTS = ['*']

@@ -3,52 +3,60 @@
 
 {% block content %}
 	<body class="container cart-page">
-	<h1 class="text-light text-center my-4">Ваш выбор</h1>
+	<h1 class="text-center my-4">Ваш выбор</h1>
 
 	{% if cart %}
-		<div class="table-responsive">
-			<table class="table">
-				<thead>
-				<tr>
-					<th>Название</th>
-					<th>Цена</th>
-					<th>Кол-во</th>
-					<th>Действия</th>
-				</tr>
-				</thead>
-				<tbody>
-				{% for dish_id, item in cart.items %}
-					<tr id="cart-item-{{ dish_id }}">
-						<td>{{ item.name }}</td>
-						<td class="price-column">
-							<span class="dish-price" data-price="{{ item.price }}">{{ item.price }}</span>
-							<span class="currency">Sum</span>
-						</td>
-						<td class="text-center">
-							<div class="d-flex justify-content-center align-items-center">
-								<button class="btn btn-sm btn-outline-secondary change-quantity"
-								        data-dish-id="{{ dish_id }}" data-action="decrease">-
-								</button>
-								<span class="quantity-text p-2" data-dish-id="{{ dish_id }}">{{ item.quantity }}</span>
-								<button class="btn btn-sm btn-outline-secondary change-quantity"
-								        data-dish-id="{{ dish_id }}" data-action="increase">+
-								</button>
-							</div>
-						</td>
-						<td class="text-center">
-							<a href="{% url 'remove_from_cart' dish_id %}" class="delete-btn text-danger">
-								<i class="fas fa-times"></i>
-							</a>
-						</td>
-					</tr>
-				{% endfor %}
-				</tbody>
-			</table>
+		<!-- Карточка с таблицей и скроллом -->
+		<div class="card cart-card">
+			<div class="card-body p-0">
+				<div class="table-scroll">
+					<table class="table mb-0">
+						<thead>
+						<tr>
+							<th>Название</th>
+							<th>Цена</th>
+							<th>Кол-во</th>
+							<th>Действия</th>
+						</tr>
+						</thead>
+						<tbody>
+						{% for dish_id, item in cart.items %}
+							<tr id="cart-item-{{ dish_id }}">
+								<td>{{ item.name }}</td>
+								<td class="price-column">
+									<span class="dish-price" data-price="{{ item.price }}">{{ item.price }}</span>
+									<span class="currency">Sum</span>
+								</td>
+								<td class="text-center">
+									<div class="d-flex justify-content-center align-items-center">
+										<button class="btn btn-sm btn-outline-secondary change-quantity"
+										        data-dish-id="{{ dish_id }}" data-action="decrease">-
+										</button>
+										<span class="quantity-text p-2" data-dish-id="{{ dish_id }}">{{ item.quantity }}</span>
+										<button class="btn btn-sm btn-outline-secondary change-quantity"
+										        data-dish-id="{{ dish_id }}" data-action="increase">+
+										</button>
+									</div>
+								</td>
+								<td class="text-center">
+									<a href="{% url 'remove_from_cart' dish_id %}" class="delete-btn text-danger">
+										<i class="fas fa-trash-alt"></i>
+									</a>
+								</td>
+							</tr>
+						{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 
-		<h3 class="text-right text-light">
-			Общая сумма: <span id="total-price">{{ total_price|floatformat:2 }}</span> <span class="currency">Sum</span>
-		</h3>
+		<!-- Фиксированная общая сумма -->
+		<div class="total-price-container">
+			<h3 class="text-right m-0">
+				Общая сумма: <span id="total-price">{{ total_price|floatformat:0 }}</span> <span class="currency">Sum</span>
+			</h3>
+		</div>
 	{% else %}
 		<div class="text-center my-5">
 			<p class="text-light">Ваша корзина пуста.</p>
@@ -101,9 +109,9 @@ $(document).ready(function() {
         $('#total-price').text(formatPrice(totalPrice));
     }
 
-    // Форматирование цены
+    // Форматирование цены (убираем .00)
     function formatPrice(price) {
-        return price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        return Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
     // Применяем форматирование к элементам с ценой при загрузке страницы
