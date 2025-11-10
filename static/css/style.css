@@ -334,13 +334,13 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.3));
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.5));
     z-index: 1;
     transition: var(--transition);
 }
 
 .category-card:hover::before {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.4));
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.5), rgba(118, 75, 162, 0.6));
 }
 
 .category-card img {
@@ -447,13 +447,13 @@ body {
     }
 
     .skeleton-image {
-        flex: 0 0 140px;
-        height: 140px;
+        flex: 0 0 110px;
+        height: 110px;
     }
 
     .skeleton-info {
         flex: 1;
-        padding: 12px;
+        padding: 8px;
     }
 }
 
@@ -464,7 +464,7 @@ body {
 #dishes {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 12px;
     margin-top: 24px;
 }
 
@@ -1159,27 +1159,29 @@ footer p {
     }
 
     .dish-image-container {
-        flex: 0 0 140px;
-        height: 140px;
-        margin-right: 16px;
+        flex: 0 0 110px;
+        height: 110px;
+        margin-right: 12px;
     }
 
     .dish-info {
         flex: 1;
-        padding: 12px;
+        padding: 8px;
     }
 
     .dish-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        margin-bottom: 6px;
     }
 
     .dish-description {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         -webkit-line-clamp: 1;
+        margin-bottom: 8px;
     }
 
     .dish-price {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 }
 

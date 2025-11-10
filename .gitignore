@@ -6,6 +6,10 @@
 .venv/
 .env/
 .env
+
+# IDE настройки (PyCharm, IntelliJ IDEA)
+.idea/
+
 # Python bytecode files
 *.pyc
 *.pyo
