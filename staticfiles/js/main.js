@@ -60,6 +60,10 @@
              * Возврат к списку категорий
              */
             returnToCategories() {
+                // Закрываем все модальные окна
+                this.closeModal();
+                this.closeEditModal();
+
                 // Очищаем контейнеры
                 $('#dishes').empty();
                 $('#pagination').empty();
@@ -87,6 +91,7 @@
                 $(document).on('click', '.prev-page', this.onPrevPageClick.bind(this));
                 $(document).on('click', '.next-page', this.onNextPageClick.bind(this));
                 $(document).on('click', '.menu-title', this.onMenuTitleClick.bind(this));
+                $(document).on('click', '.edit-dish-btn', this.onEditDishClick.bind(this));
 
                 // Обработчики для поиска
                 $('#dish-search').on('input', this.debounce(this.onSearchInput.bind(this), 300));
@@ -274,13 +279,159 @@
                 const imageUrl = $(e.currentTarget).attr('src');
                 $('#modalDishImage').attr('src', imageUrl);
 
-                // Bootstrap 5 способ открытия модального окна
-                const modalElement = document.getElementById('dishModal');
-                const modal = new bootstrap.Modal(modalElement, {
-                    keyboard: true,
-                    backdrop: true
+                // Открываем кастомное модальное окно
+                this.openModal();
+            },
+
+            /**
+             * Открыть модальное окно
+             */
+            openModal() {
+                const $modal = $('#dishModal');
+                $modal.fadeIn(300).addClass('active');
+
+                // Блокируем прокрутку body
+                $('body').css('overflow', 'hidden');
+
+                // Обработчики закрытия
+                $('.custom-modal-backdrop, .custom-modal-image, .custom-modal-close').off('click').on('click', (e) => {
+                    this.closeModal();
                 });
-                modal.show();
+
+                // Закрытие по Esc
+                $(document).off('keydown.modal').on('keydown.modal', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                    }
+                });
+            },
+
+            /**
+             * Закрыть модальное окно
+             */
+            closeModal() {
+                const $modal = $('#dishModal');
+                $modal.removeClass('active').fadeOut(300);
+
+                // Разблокируем прокрутку body
+                $('body').css('overflow', '');
+
+                // Удаляем обработчики
+                $(document).off('keydown.modal');
+            },
+
+            /**
+             * Обработчик клика по кнопке редактирования блюда
+             */
+            onEditDishClick(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const $btn = $(e.currentTarget);
+                const dishData = {
+                    id: $btn.data('dish-id'),
+                    name: $btn.data('dish-name'),
+                    description: $btn.data('dish-description'),
+                    price: $btn.data('dish-price'),
+                    image: $btn.data('dish-image'),
+                    is_available: $btn.data('dish-available')
+                };
+
+                this.openEditModal(dishData);
+            },
+
+            /**
+             * Открыть модальное окно редактирования блюда
+             */
+            openEditModal(dishData) {
+                // Заполняем форму данными
+                $('#edit-dish-id').val(dishData.id);
+                $('#edit-dish-name').val(dishData.name);
+                $('#edit-dish-description').val(dishData.description);
+                $('#edit-dish-price').val(dishData.price);
+                $('#edit-dish-available').prop('checked', dishData.is_available);
+
+                // Показываем превью изображения если есть
+                if (dishData.image) {
+                    $('#edit-dish-image-preview').attr('src', dishData.image).show();
+                } else {
+                    $('#edit-dish-image-preview').hide();
+                }
+
+                // Показываем модальное окно
+                const $modal = $('#editDishModal');
+                $modal.fadeIn(300).addClass('active');
+                $('body').css('overflow', 'hidden');
+
+                // Обработчики закрытия
+                $('.edit-modal-backdrop, .edit-modal-close').off('click').on('click', () => {
+                    this.closeEditModal();
+                });
+
+                // Закрытие по Esc
+                $(document).off('keydown.editmodal').on('keydown.editmodal', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeEditModal();
+                    }
+                });
+
+                // Обработчик отправки формы
+                $('#edit-dish-form').off('submit').on('submit', (e) => {
+                    e.preventDefault();
+                    this.saveDishChanges();
+                });
+            },
+
+            /**
+             * Закрыть модальное окно редактирования
+             */
+            closeEditModal() {
+                const $modal = $('#editDishModal');
+                $modal.removeClass('active').fadeOut(300);
+                $('body').css('overflow', '');
+                $(document).off('keydown.editmodal');
+            },
+
+            /**
+             * Сохранить изменения блюда
+             */
+            saveDishChanges() {
+                const formData = new FormData($('#edit-dish-form')[0]);
+
+                // Добавляем секретный ключ для авторизации
+                formData.append('edit_key', editSecretKey);
+
+                $.ajax({
+                    url: '/update-dish/',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: (response) => {
+                        if (response.success) {
+                            this.showMessage(response.message || 'Блюдо успешно обновлено!', 'success');
+                            this.closeEditModal();
+
+                            // Очищаем кеш и перезагружаем блюда
+                            localStorage.clear();
+                            this.loadDishes(this.config.categoryId, this.config.currentPage);
+                        } else {
+                            this.showMessage(response.error || 'Ошибка при сохранении', 'error');
+                        }
+                    },
+                    error: (xhr) => {
+                        let errorMessage = 'Ошибка при сохранении изменений';
+
+                        if (xhr.status === 403) {
+                            errorMessage = 'Доступ запрещен';
+                        } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        }
+
+                        this.showMessage(errorMessage, 'error');
+                        console.error('Ошибка:', xhr);
+                    }
+                });
             },
 
             /**
@@ -308,8 +459,11 @@
              */
             onMenuTitleClick(e) {
                 e.preventDefault();
-                // Используем history.back() для возврата к категориям
-                window.history.back();
+                // Напрямую возвращаемся к главной странице
+                this.returnToCategories();
+
+                // Обновляем историю браузера
+                window.history.pushState({page: 'categories'}, '', window.location.pathname + window.location.search);
             },
 
             /**
@@ -386,12 +540,27 @@
                                 <p class="dish-description">${this.escapeHtml(dish.description || '')}</p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="dish-price">${dish.price} Sum</span>
-                                    <button class="btn add-to-cart-btn"
-                                            data-dish-id="${dish.id}"
-                                            title="Добавить блюдо"
-                                            aria-label="Добавить ${this.escapeHtml(dish.name)} в корзину">
-                                        <i class="fas fa-shopping-cart fa-lg"></i>
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        ${isEditMode ? `
+                                            <button class="btn edit-dish-btn"
+                                                    data-dish-id="${dish.id}"
+                                                    data-dish-name="${this.escapeHtml(dish.name)}"
+                                                    data-dish-description="${this.escapeHtml(dish.description || '')}"
+                                                    data-dish-price="${dish.price}"
+                                                    data-dish-image="${dish.image_url || ''}"
+                                                    data-dish-available="${dish.is_available}"
+                                                    title="Редактировать блюдо"
+                                                    aria-label="Редактировать ${this.escapeHtml(dish.name)}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn add-to-cart-btn"
+                                                data-dish-id="${dish.id}"
+                                                title="Добавить блюдо"
+                                                aria-label="Добавить ${this.escapeHtml(dish.name)} в корзину">
+                                            <i class="fas fa-shopping-cart fa-lg"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

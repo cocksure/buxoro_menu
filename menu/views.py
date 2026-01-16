@@ -1,24 +1,59 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.cache import cache_page
+from django.views.decorators.http import condition
+import os
+import time
 
 from .models import Category, Dish, Restaurant
 
 
+def serve_menu_pdf(request):
+    """Отдача PDF меню с долгосрочным кешированием в браузере"""
+    # Путь к PDF файлу
+    pdf_path = os.path.join(settings.BASE_DIR, 'static', 'menu', 'menu.pdf')
+
+    # Проверяем существование файла
+    if not os.path.exists(pdf_path):
+        raise Http404("PDF меню не найдено")
+
+    # Открываем файл и создаем ответ
+    response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
+
+    # Устанавливаем заголовки для долгосрочного кеширования
+    # Cache-Control: кешировать на 30 дней (2592000 секунд)
+    response['Cache-Control'] = 'public, max-age=2592000, immutable'
+
+    # ETag для проверки изменений файла (используем время модификации)
+    file_mtime = os.path.getmtime(pdf_path)
+    etag = f'"{int(file_mtime)}"'
+    response['ETag'] = etag
+
+    # Expires заголовок (дополнительно для старых браузеров)
+    expires_time = time.time() + 2592000  # 30 дней
+    response['Expires'] = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(expires_time))
+
+    # Content-Disposition: открыть в браузере (не скачивать)
+    response['Content-Disposition'] = 'inline; filename="menu.pdf"'
+
+    return response
+
+
 def menu_view(request):
     """Главная страница меню с категориями и информацией о ресторане"""
-    # Получаем активный ресторан (не кешируем объект, только запрос)
-    restaurant = Restaurant.objects.filter(is_active=True).select_related().first()
-
-    # Получаем категории
+    restaurant = Restaurant.objects.filter(is_active=True).first()
     categories = Category.objects.all().order_by('display_order')
 
     # Проверяем секретный ключ для режима редактирования
     edit_key = request.GET.get('edit', '')
+
+    # 🔹 Минимальный фикс для теста на телефоне
     is_edit_mode = (edit_key == settings.EDIT_SECRET_KEY)
+    # Если хочешь быстро проверить, всегда True для любого ?edit
+    # is_edit_mode = bool(edit_key)
 
     context = {
         'categories': categories,

@@ -1,14 +1,11 @@
 from django.urls import path
-from django.views.generic import RedirectView
 
 from . import views
 from .views import RestaurantListView, CategoryListView, DishListView, CartView
 
 urlpatterns = [
     path('v2/', views.menu_view, name='menu'),
-    path('',
-         RedirectView.as_view(url="https://drive.google.com/file/d/1wpnpjVcngdfbC5bVcChzYHY4oRZuRUvW/view?usp=sharing",
-                              permanent=False), name="menu"),
+    path('', views.serve_menu_pdf, name='menu_pdf'),
 
     path('load-dishes/<int:category_id>/', views.load_dishes, name='load_dishes'),
     path('add-to-cart/<int:dish_id>/', views.add_to_cart, name='add_to_cart'),
